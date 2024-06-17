@@ -2,17 +2,29 @@
 using System.Text;
 using Dutchskull.Aspire.PolyRepo.Interfaces;
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Dutchskull.Aspire.PolyRepo;
 
 public class ProcessCommandExecutor : IProcessCommandExecutor
 {
-    public int BuildDotNetProject(string resolvedProjectPath) => RunProcess("dotnet", $"build {resolvedProjectPath}");
+    private readonly ILogger<ProcessCommandExecutor> _logger;
 
-    public void CloneGitRepository(string gitUrl, string resolvedRepositoryPath, string? branch = null)
+    public ProcessCommandExecutor()
     {
-        Repository.Clone(gitUrl, resolvedRepositoryPath, new CloneOptions { BranchName = branch });
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+            .SetMinimumLevel(LogLevel.Trace)
+            .AddConsole());
+
+        _logger = loggerFactory.CreateLogger<ProcessCommandExecutor>();
     }
+
+    public int BuildDotNetProject(string resolvedProjectPath) =>
+        RunProcess("dotnet", $"build {resolvedProjectPath}");
+
+    public void CloneGitRepository(string gitUrl, string resolvedRepositoryPath, string? branch = null) =>
+        Repository.Clone(gitUrl, resolvedRepositoryPath, new CloneOptions { BranchName = branch });
 
     public int NpmInstall(string resolvedRepositoryPath) =>
         RunProcess("cmd.exe", $"/C cd {resolvedRepositoryPath} && npm i");
@@ -37,7 +49,7 @@ public class ProcessCommandExecutor : IProcessCommandExecutor
         repository.Reset(ResetMode.Hard, latestCommit);
     }
 
-    private static int RunProcess(string fileName, string arguments)
+    private int RunProcess(string fileName, string arguments)
     {
         Process process = new()
         {
@@ -55,9 +67,9 @@ public class ProcessCommandExecutor : IProcessCommandExecutor
         StringBuilder output = new();
         StringBuilder error = new();
 
-        process.OutputDataReceived += LogData(output, "OUTPUT");
+        process.OutputDataReceived += LogData(output, message => _logger.LogInformation(message!));
 
-        process.ErrorDataReceived += LogData(error, "ERROR");
+        process.ErrorDataReceived += LogData(error, message => _logger.LogError(message));
 
         process.Start();
         process.BeginOutputReadLine();
@@ -66,20 +78,20 @@ public class ProcessCommandExecutor : IProcessCommandExecutor
 
         if (process.ExitCode == 0)
         {
-            Console.WriteLine($"Process {fileName} {arguments} finished successfully.");
+            _logger.LogInformation("Process {fileName} {arguments} finished successfully.", fileName, arguments);
 
             return process.ExitCode;
         }
 
-        string errorMessage = $"Process {fileName} {arguments} failed with exit code {process.ExitCode}: {error}";
-        Console.WriteLine(errorMessage);
+        _logger.LogError("Process {fileName} {arguments} failed with exit code {process.ExitCode}: {error}", fileName,
+            arguments, process.ExitCode, error);
 
-        throw new Exception(errorMessage);
+        throw new Exception($"Process {fileName} {arguments} failed with exit code {process.ExitCode}: {error}");
     }
 
-    private static DataReceivedEventHandler LogData(StringBuilder output, string type)
+    private static DataReceivedEventHandler LogData(StringBuilder output, Action<string> logger)
     {
-        return (sender, e) =>
+        return (_, e) =>
         {
             if (string.IsNullOrEmpty(e.Data))
             {
@@ -87,7 +99,7 @@ public class ProcessCommandExecutor : IProcessCommandExecutor
             }
 
             output.AppendLine(e.Data);
-            Console.WriteLine($"[{type}]: {e.Data}");
+            logger(e.Data);
         };
     }
 }
