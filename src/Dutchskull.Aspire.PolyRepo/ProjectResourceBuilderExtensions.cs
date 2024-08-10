@@ -11,7 +11,11 @@ public static class ProjectResourceBuilderExtensions
         string repositoryUrl,
         Action<RepositoryConfigBuilder> configureGitRepositoryBuilderAction = default!)
     {
-        RepositoryConfig gitRepositoryConfig = configureGitRepositoryBuilderAction.InitializeRepository(repositoryUrl);
+        RepositoryConfigBuilder gitRepositoryConfigBuilder = new RepositoryConfigBuilder().WithGitUrl(repositoryUrl);
+
+        configureGitRepositoryBuilderAction?.Invoke(gitRepositoryConfigBuilder);
+
+        RepositoryConfig gitRepositoryConfig = gitRepositoryConfigBuilder.Build();
 
         RepositoryResource resource = new(name, gitRepositoryConfig);
 

@@ -142,4 +142,21 @@ public class GitRepositoryConfigBuilderTests
             .Should()
             .Be(processCommandsExecutor);
     }
+
+    [Fact]
+    public void WithWorktree_ShouldSetWorktreePath()
+    {
+        // Arrange
+        const string gitUrl = "https://github.com/example/repo.git";
+        const string worktreePath = "/custom/worktree/path";
+
+        // Act
+        RepositoryConfig config = new RepositoryConfigBuilder()
+            .WithGitUrl(gitUrl)
+            .WithWorktree(worktreePath)
+            .Build();
+
+        // Assert
+        config.WorktreePath.Should().Be(worktreePath);
+    }
 }

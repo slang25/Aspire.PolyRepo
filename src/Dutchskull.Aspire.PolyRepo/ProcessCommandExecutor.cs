@@ -37,6 +37,13 @@ public class ProcessCommandExecutor : IProcessCommandExecutor
         repository.Reset(ResetMode.Hard, latestCommit);
     }
 
+    public void CreateWorktree(string repositoryPath, string worktreePath, string? branch = null)
+    {
+        using Repository repository = new(repositoryPath);
+        Commands.Checkout(repository, repository.Branches[branch]);
+        RunProcess("git", $"worktree add {worktreePath} {branch}");
+    }
+
     private static int RunProcess(string fileName, string arguments)
     {
         Process process = new()
