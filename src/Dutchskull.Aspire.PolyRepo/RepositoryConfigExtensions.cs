@@ -41,6 +41,37 @@ internal static class RepositoryConfigExtensions
         return repositoryConfig;
     }
 
-    private static RepositoryConfig SetupRepository(this RepositoryConfig gitRepositoryConfig) =>
-        CloneRepository(gitRepositoryConfig);
+    private static RepositoryConfig SetupRepository(this RepositoryConfig gitRepositoryConfig)
+    {
+        if (!string.IsNullOrEmpty(gitRepositoryConfig.WorktreePath))
+        {
+            return SetupWorktree(gitRepositoryConfig);
+        }
+
+        return CloneRepository(gitRepositoryConfig);
+    }
+
+    private static RepositoryConfig SetupWorktree(this RepositoryConfig gitRepositoryConfig)
+    {
+        bool worktreeExists = gitRepositoryConfig.FileSystem.DirectoryExists(gitRepositoryConfig.WorktreePath);
+
+        if (!worktreeExists)
+        {
+            gitRepositoryConfig.ProcessCommandsExecutor
+                .CreateWorktree(
+                    gitRepositoryConfig.RepositoryPath,
+                    gitRepositoryConfig.WorktreePath,
+                    gitRepositoryConfig.Branch);
+
+            return gitRepositoryConfig;
+        }
+
+        if (gitRepositoryConfig.KeepUpToDate)
+        {
+            gitRepositoryConfig.ProcessCommandsExecutor
+                .PullAndResetRepository(gitRepositoryConfig.WorktreePath);
+        }
+
+        return gitRepositoryConfig;
+    }
 }

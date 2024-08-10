@@ -10,6 +10,7 @@ public class RepositoryConfigBuilder
     private bool _keepUpToDate;
     private IProcessCommandExecutor? _processCommandsExecutor;
     private string _targetPath = ".";
+    private string? _worktreePath;
 
     public RepositoryConfig Build()
     {
@@ -28,7 +29,8 @@ public class RepositoryConfigBuilder
             Branch = _branch,
             KeepUpToDate = _keepUpToDate,
             ProcessCommandsExecutor = _processCommandsExecutor ?? new ProcessCommandExecutor(),
-            FileSystem = _fileSystem ?? new FileSystem()
+            FileSystem = _fileSystem ?? new FileSystem(),
+            WorktreePath = _worktreePath
         };
     }
 
@@ -46,7 +48,6 @@ public class RepositoryConfigBuilder
         return this;
     }
 
-
     public RepositoryConfigBuilder KeepUpToDate()
     {
         _keepUpToDate = true;
@@ -54,6 +55,12 @@ public class RepositoryConfigBuilder
         return this;
     }
 
+    public RepositoryConfigBuilder WithWorktree(string worktreePath)
+    {
+        _worktreePath = worktreePath;
+
+        return this;
+    }
 
     internal RepositoryConfigBuilder WithFileSystem(IFileSystem? fileSystem)
     {
